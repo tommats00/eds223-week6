@@ -1,0 +1,163 @@
+---
+title: "Week 6 Lab"
+author: "Tom Gibbens-Matsuyama"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Load libraries
+```{r}
+library(sf) # vector handling
+library(terra) # raster handling
+library(tidyverse)
+library(tmap) # map making
+library(spData) # spatial data
+library(spDataLarge) # spatial data
+```
+
+### Load data and check CRS
+```{r}
+# Read in data
+boundary <- read_sf(system.file("vector/zion.gpkg", package = "spDataLarge"))
+
+elevation <- terra::rast(system.file("raster/srtm.tif", package = "spDataLarge"))
+
+# Check to see if CRS are the same
+if(crs(elevation) == crs(boundary)) {
+  print("CRS Matches")
+} else {
+  boundary <- st_transform(boundary, st_crs(elevation))
+}
+```
+
+```{r}
+# Checking what type of geometry our data is 
+if(sf::st_geometry_type(boundary) == "POLYGON") {
+  print("polygona data")
+} else {
+  print("not polygon data")
+}
+```
+
+### Changing polygon vector data into multistring vector data
+```{r}
+# Polygon of boundary data
+park_polygon <- boundary
+
+# Create line version of the park boundary
+# Change geometry to MULTISTRING, to create just lines
+park_border <- boundary %>% 
+  sf::st_cast(., "MULTILINESTRING")
+
+# Plot and view the difference between them
+tm_shape(park_polygon) +
+  tm_polygons()
+
+tm_shape(park_border) +
+  tm_lines()
+```
+
+## Changing vector data into raster data
+```{r}
+
+# Elevation = template raster (using the geometries)
+polygon_raster <- terra::rasterize(park_polygon, elevation)
+border_raster <- terra::rasterize(park_border, elevation)
+
+# Polygon raster
+tm_shape(polygon_raster) +
+  tm_raster()
+
+tm_shape(border_raster) +
+  tm_raster()
+```
+
+## Create different rasters
+```{r}
+# Lower spatial resolution template
+template_raster_low <- terra::rast(ext(park_polygon),
+                                   resolution = 0.05,
+                                   crs = st_crs(park_polygon))
+# Higher spatial resolution template
+template_raster_high <- terra::rast(ext(park_polygon),
+                                   resolution = 0.01,
+                                   crs = st_crs(park_polygon))
+
+polygon_raster_low <- terra::rasterize(park_polygon,
+                                       template_raster_low)
+
+polygon_raster_high <- terra::rasterize(park_polygon,
+                                        template_raster_high)
+```
+
+```{r}
+tm_shape(polygon_raster_low) +
+  tm_raster()
+
+tm_shape(polygon_raster_high) +
+  tm_raster()
+```
+
+```{r}
+# Taking cycle hire data
+cycle_hire_osm <- spData::cycle_hire_osm
+
+# Transforming so the CRS is as follows
+cycle_hire_osm_projected <- st_transform(cycle_hire_osm, "EPSG:27700")
+
+# Create a template raster 
+template_raster <- terra::rast(ext(cycle_hire_osm_projected),
+                               resolution = 1000,
+                               crs = crs(cycle_hire_osm_projected))
+
+tm_shape(cycle_hire_osm_projected) +
+  tm_symbols()
+```
+
+```{r}
+# Presence/absence of cycle hire points
+ch_raster1 <- terra::rasterize(cycle_hire_osm_projected,
+                               template_raster) 
+
+tm_shape(ch_raster1) +
+  tm_raster()
+
+ch_raster2 <- terra::rasterize(cycle_hire_osm_projected,
+                               template_raster,
+                               fun = "length") # fun = "length" is counting number of points in each grid cell, 
+
+tm_shape(ch_raster2) +
+  tm_raster(title = "Number of cycle hire points")
+
+ch_raster3 <- terra::rasterize(cycle_hire_osm_projected,
+                               template_raster,
+                               field = "capacity",
+                               fun = sum,
+                               na.rm = TRUE)
+
+tm_shape(ch_raster3) +
+  tm_raster(title = "Total capacity")
+```
+
+
+## Color Imagery
+```{r}
+L7 <- terra::rast(system.file("tif/L7_ETMs.tif", package = "stars"))
+
+# True color imagery
+tm_shape(L7) +
+  tm_rgb(r = 3, g = 2, b = 1)
+
+
+# False color imagery 
+tm_shape(L7) +
+  tm_rgb(r = 4, g = 3, b = 2) # r = 4 indicates infrared in red channel, g = 3 indicates red in green channel, b = 2 indicates green in blue channel
+
+
+# False color imagery
+tm_shape(L7) +
+  tm_rgb(r = 5, g = 4, b = 2) # 5 = short-wave infrared, 4 = near-infrared, 2 = green 
+```
+
