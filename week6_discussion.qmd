@@ -1,0 +1,121 @@
+---
+title: "week6_discussion"
+author: "Tom Gibbens-Matsuyama"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(sf)
+library(terra)
+```
+
+```{r}
+# Set directory for folder
+pre_fire_dir <- here::here("data", "LC80340322016189-SC20170128091153")
+
+# Create a list of all images that have the extension .tif and contain the word band
+pre_fire_bands <- list.files(pre_fire_dir,
+                             pattern = glob2rx("*band*.tif$"),
+                             full.names = TRUE)
+# Create a raster stack
+pre_fire_rast <- rast(pre_fire_bands)
+
+# Read mask raster
+pre_mask <- rast(here::here("data", "LC80340322016189-SC20170128091153", "LC80340322016189LGN00_cfmask_crop.tif"))
+```
+
+```{r}
+# Set directory for folder
+post_fire_dir <- here::here("data", "LC80340322016205-SC20170127160728")
+
+# Create a list of all images that have the extension .tif and contain the word band
+post_fire_bands <- list.files(post_fire_dir,
+                             pattern = glob2rx("*band*.tif$"),
+                             full.names = TRUE)
+# Create a raster stack
+post_fire_rast <- rast(post_fire_bands)
+
+# Read mask raster
+post_mask <- rast(here::here("data", "LC80340322016189-SC20170128091153", "LC80340322016189LGN00_cfmask_crop.tif"))
+```
+
+```{r}
+nbr_fun <- function(nir, swir2){
+    (nir - swir2)/(nir + swir2)
+}
+```
+
+### 3. Your Task
+
+```{r}
+bands <- c("Aerosol", "blue", "green", "red", "NIR", "SWIR1", "SWIR2")
+
+names(pre_fire_rast) <- bands
+names(post_fire_rast) <- bands
+```
+
+```{r}
+pre_mask[pre_mask > 0] <- NA
+post_mask[post_mask > 0] <- NA
+
+pre_fire_rast <- mask(pre_fire_rast, mask = pre_mask)
+post_fire_rast <- mask(post_fire_rast, mask = post_mask)
+```
+
+```{r}
+plot(pre_fire_rast, colNA = "orange")
+plot(post_fire_rast, colNA = "white")
+```
+
+# Stretch image
+```{r}
+# Can stretch image through plotRGB
+plotRGB(pre_fire_rast, r = 4, g = 3, b = 2, stretch = "lin", colNA = "black")
+plotRGB(post_fire_rast , r = 4, g = 3, b = 2, stretch = "lin", colNA = "black")
+```
+
+# Plot two false color composite using plotRGB()
+
+```{r}
+plotRGB(pre_fire_rast, r = 7, g = 5, b = 3, stretch = "lin", colNA = "black")
+
+plotRGB(post_fire_rast, r = 7, g = 5, b = 3, stretch = "lin", colNA = "black")
+```
+
+# Calculate normalized burn ratio (NBR)
+```{r}
+# NDVI 
+ndvi_fun <- function(nir,red){
+  (nir - red)/(nir + red)
+}
+
+ndvi_rast_pre <- terra::lapp(pre_fire_rast[[c(5,3)]],
+                         fun = ndvi_fun)
+
+ndvi_rast_post <- terra::lapp(post_fire_rast[[c(5,3)]],
+                         fun = ndvi_fun)
+plot(ndvi_rast_pre)
+plot(ndvi_rast_post)
+
+
+# NDWI
+ndwi_fun <- function(green, nir){
+    (green - nir)/(green + nir)
+}
+
+ndwi_rast <- terra::lapp(pre_fire_rast[[c(3,5)]],
+                         fun = ndwi_fun)
+
+plot(ndwi_rast)
+```
+
+# Difference NBR
+
+```{r}
+
+```
+
