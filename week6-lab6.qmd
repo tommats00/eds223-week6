@@ -8,6 +8,7 @@ editor_options:
 ---
 
 ## Load libraries
+
 ```{r}
 library(sf) # vector handling
 library(terra) # raster handling
@@ -18,6 +19,7 @@ library(spDataLarge) # spatial data
 ```
 
 ### Load data and check CRS
+
 ```{r}
 # Read in data
 boundary <- read_sf(system.file("vector/zion.gpkg", package = "spDataLarge"))
@@ -42,6 +44,7 @@ if(sf::st_geometry_type(boundary) == "POLYGON") {
 ```
 
 ### Changing polygon vector data into multistring vector data
+
 ```{r}
 # Polygon of boundary data
 park_polygon <- boundary
@@ -60,6 +63,7 @@ tm_shape(park_border) +
 ```
 
 ## Changing vector data into raster data
+
 ```{r}
 
 # Elevation = template raster (using the geometries)
@@ -75,6 +79,7 @@ tm_shape(border_raster) +
 ```
 
 ## Create different rasters
+
 ```{r}
 # Lower spatial resolution template
 template_raster_low <- terra::rast(ext(park_polygon),
@@ -141,8 +146,8 @@ tm_shape(ch_raster3) +
   tm_raster(title = "Total capacity")
 ```
 
-
 ## Color Imagery
+
 ```{r}
 L7 <- terra::rast(system.file("tif/L7_ETMs.tif", package = "stars"))
 
@@ -160,4 +165,3 @@ tm_shape(L7) +
 tm_shape(L7) +
   tm_rgb(r = 5, g = 4, b = 2) # 5 = short-wave infrared, 4 = near-infrared, 2 = green 
 ```
-
